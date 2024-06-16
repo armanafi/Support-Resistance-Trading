@@ -21,7 +21,7 @@ class FindLevels():
   def __init__(self, radius=240):  
     self.radius=radius
     #---------------configuration, must be updated every midnight, with last day prices
-    self.levels_shape = np.empty(shape=[0, 4]) #CurrentTime, FindTime, Level
+    self.levels_shape = np.empty(shape=[0, 4]) #CurrentTime, FindTime, Level, Psitive_signal
     self.levels = pd.DataFrame({'level_max':[],'level_min':[],'occurrences':[],'first_time':[],'last_time':[]})
     self.levels=self.levels.astype({'level_max':'float','level_min':'float','occurrences':'int','first_time':'str','last_time':'str'})
 
@@ -133,7 +133,7 @@ class BackData():
     client = Client_binance('','')
     self.back_data = pd.DataFrame(client.get_historical_klines(symbol, '1m', str(self.download_back_days)+' day ago UTC')) #Get Historical Klines from Binance(last 100 min bars), and put in a Panda Matrix (Time'ms', OHLCV, ..)
     self.back_data = self.back_data.iloc[:,:6] # trim first 6 columns(time+OHLCV )
-    self.back_data.columns = ['Time','Open', 'High', 'Low', 'Close', 'Volume'] #define Panad column names
+    self.back_data.columns = ['Time','Open', 'High', 'Low', 'Close', 'Volume'] #define Panda column names
     self.back_data.to_csv(self.back_file_name) #save to file for next Runs  
 
   def gap_fill(self): 
@@ -183,7 +183,7 @@ class Plot():
     figure = go.Figure()
     figure.add_trace(go.Scatter(x=list(time), y=list(close), line=dict(color='Blue', width=1 )))#Display Close Prices
 
-    for i in range(1,len(levels)):# Display Resistance/Support Leels
+    for i in range(1,len(levels)):# Display Resistance/Support Levels
       if levels[i,3]:
         color='Green'
       else:
@@ -247,9 +247,9 @@ for i in range(len_frame): #look back with shift back radius
       plevel=fL.levels_shape[-2,2]
 
       buy_price=cur_price
-      sell_price=cur_price+cur_price-plevel#-fL.levels_shape[-1,2]
+      sell_price=cur_price+cur_price-plevel
       take_profit=cur_price*1.10
-      stop_loss=plevel#max(cur_price*.97, fL.levels_shape[-2,2])#max(.93*cur_price, level_min)
+      stop_loss=plevel
     
       trades.at[i_trade,'buy_price']=cur_price
       trades.at[i_trade,'buy_stime']=cur_time
@@ -272,7 +272,7 @@ for i in range(len_frame): #look back with shift back radius
       trades.at[i_trade,'pattern']=''
       if cur_price<sell_price<=pcur_price:#cross down 
        trades.at[i_trade,'pattern']='L1'
-      if pcur_price<take_profit<=cur_price:# or cur_price<np.mean(back_data.Close.iloc[i-5:i+1].to_numpy()):#cross up from TP
+      if pcur_price<take_profit<=cur_price:
        trades.at[i_trade, 'pattern']='TP'         
       if cur_price<stop_loss<=pcur_price :#cross down from SL
        trades.at[i_trade, 'pattern']='SL'
